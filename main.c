@@ -47,10 +47,9 @@ Node* getHilbertCurve(int * pixels, int width, int height) {
 		}
 	}
 
-	printf("s1 counter: %u\n", s1counter);
-	printf("s1 counter: %u\n", s2counter);
-	printf("s3 counter: %u\n", s3counter);
-	printf("s4 counter: %u\n", s4counter);
+	for (int i = 0; i < s1counter; i++) {
+		printf("%x\n",s1[i]);
+	}
 
 	Node * returnValue = getHilbertCurveHelper(s1, s2, s3, s4);
 
