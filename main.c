@@ -3,98 +3,73 @@
 #include <math.h>
 #include <stdbool.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+
+#include "stb_image.h"
+
 typedef struct {
-	int* val;
-	int* next;
-	int* prev;
-} Node;
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+} Pixel;
 
-void writeToFile(Node* n) {
-	// TODO implement me
+struct Node {
+	Pixel val;
+	struct Node* next;
+};
+
+typedef struct Node Node;
+
+Node* getEndNode(Node* n) {
+	while (n->next) { n = n->next; }
+	return n;
 }
 
-Node* getHilbertCurveHelper(int * s1, int * s2, int * s3, int * s4) {
-	return (Node *) NULL;
+void printPixel(Pixel p) {
+	printf("(%i, %i, %i)\n", p.r, p.g, p.b);
 }
 
-Node* getHilbertCurve(int * pixels, int width, int height) {
-	int * s1 = (int *) malloc(sizeof(int) * width * height / 4);
-	int * s2 = (int *) malloc(sizeof(int) * width * height / 4);
-	int * s3 = (int *) malloc(sizeof(int) * width * height / 4);
-	int * s4 = (int *) malloc(sizeof(int) * width * height / 4);
+void printNodes(Node* n) {
+	while (n) {
+		printPixel(n->val);
+		n = n->next;
+	}
+}
 
-	int s1counter = 0, s2counter = 0, s3counter = 0, s4counter = 0;
+void sonify(Node* curveStart, int length) {
 
-	for (int i = 0; i < width * height; i++) {
-		bool top = (i < width * height / 2);
-		bool left = (i % width < width / 2);
+}
 
-		if (top && left) {
-			s1[s1counter] = pixels[i];
-			s1counter++;
-		}
-		else if (top && !left) {
-			s2[s2counter] = pixels[i];
-			s2counter++;
-		}
-		else if (!top && left) {
-			s3[s3counter] = pixels[i];
-			s3counter++;
-		}
-		else if (!top && !left) {
-			s4[s4counter] = pixels[i];
-			s4counter++;
-		}
+// Width is constant
+Node* getHilbertCurveHelper(Node* nodes, int size, int width) {
+	if (size == 1) { return nodes; }
+
+	int n1_start_index = 0;
+	int n2_start_index = size/2;
+	int n3_start_index = (width * (size/2));
+	int n4_start_index = (width * (size/2)) + size/2;
+
+	Node* n1 = getHilbertCurveHelper(nodes + n1_start_index, size/2, width);
+	Node* n2 = getHilbertCurveHelper(nodes + n2_start_index, size/2, width);
+	Node* n3 = getHilbertCurveHelper(nodes + n3_start_index, size/2, width);
+	Node* n4 = getHilbertCurveHelper(nodes + n4_start_index, size/2, width);
+
+	(getEndNode(n1))->next = n2;
+	(getEndNode(n2))->next = n4;
+	(getEndNode(n4))->next = n3;
+
+	return n1;
+}
+
+Node* getHilbertCurve(Pixel* pixels, Node* nodes, int width) {
+	for (int i = 0; i < width * width; i++) {
+		nodes[i].val = pixels[i];
+		nodes[i].next = (Node *) NULL;
 	}
 
-	for (int i = 0; i < s1counter; i++) {
-		printf("%x\n",s1[i]);
-	}
-
-	Node * returnValue = getHilbertCurveHelper(s1, s2, s3, s4);
-
-	free(s1);
-	free(s2);
-	free(s3);
-	free(s4);
+	Node * returnValue = getHilbertCurveHelper(nodes, width, width);
 
 	return returnValue;
-}
-
-Node* visualize(SDL_Surface *image) {
-
-	// Image width and height
-	const int width = image->w;
-	const int height = image->h;
-
-	// Create our 1d pixel array on the heap
-	int * pixel_array = (int *) malloc(width * height * sizeof(int));
-
-	int pitch = image->pitch;
-
-	// Write to the pixels
-	SDL_LockSurface(image);
-
-	// Iterate through pixels, store them in an array
-	for (int y = 0; y < height; y++) {
-		unsigned int* row = (unsigned int*)((char*)image->pixels + pitch * y);
-		for (int x = 0; x < width; x++) {
-			pixel_array[y * width + x] = row[x];
-		}
-	}
-
-	// Create doubly-linked lists for each block of 4 px in the array
-	Node* curve = getHilbertCurve(pixel_array, width, height);
-
-	// Be free!
-    free(pixel_array);
-
-	// Stop writing
-	SDL_UnlockSurface(image);
-
-	// Return!
-	return curve;
-
 }
 
 int main(int argc, char *argv[]) {
@@ -105,20 +80,38 @@ int main(int argc, char *argv[]) {
 	}
 
 	char *fileName;
-	if (argc == 1) fileName = (char *)"Mandelbrot.bmp";
+	if (argc == 1) fileName = (char *) "Mandelbrot.bmp";
 	else fileName = argv[1];
 
-	// Initialize SDL stuff
-	SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_Surface *image = SDL_LoadBMP(fileName);
+	int width, height, channels;
+	unsigned char* img = stbi_load(fileName, &width, &height, &channels, 0);
+
+	if (width != height) {
+		printf("ERROR: image isn't square :// try again");
+		return -1;
+	}
+
+	Pixel *pixels = (Pixel *) malloc(width * width * sizeof(Pixel));
+	Node* nodes = (Node *) malloc(width * width * sizeof(Node));
+
+	int i = 0;
+	for (unsigned char* p = img, i = 0; p != img + (width * width * channels); p += channels, i++) {
+		Pixel pix = {*p, *(p + 1), *(p + 2)};
+		pixels[i] = pix;
+	}
 
 	// Visualize the image
-	Node* visualization = visualize(image);
-	writeToFile(visualization);
+	Node* hilbertCurve = getHilbertCurve(pixels, nodes, width);
+	
+	// Debugging
+	printNodes(hilbertCurve);
 
-	// Cleanup
-	SDL_FreeSurface(image);
-	SDL_Quit();
+	// Sonification! :D
+	sonify(hilbertCurve, width * width);
+
+	// Free dynamic memory
+	free(pixels);
+	free(nodes);
 
 	return 0;
 }
