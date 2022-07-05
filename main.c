@@ -25,13 +25,9 @@ Node* getEndNode(Node* n) {
 	return n;
 }
 
-void printPixel(Pixel p) {
-	printf("(%i, %i, %i)\n", p.r, p.g, p.b);
-}
-
 void printNodes(Node* n) {
 	while (n) {
-		printPixel(n->val);
+		printf("(%i, %i, %i)\n", n->val.r, n->val.g, n->val.b);
 		n = n->next;
 	}
 }
@@ -41,7 +37,7 @@ void sonify(Node* curveStart, int length) {
 }
 
 // Width is constant
-Node* getHilbertCurveHelper(Node* nodes, int size, int width) {
+Node* getHilbertCurve(Node* nodes, int size, int width) {
 	if (size == 1) { return nodes; }
 
 	int n1_start_index = 0;
@@ -49,27 +45,16 @@ Node* getHilbertCurveHelper(Node* nodes, int size, int width) {
 	int n3_start_index = (width * (size/2));
 	int n4_start_index = (width * (size/2)) + size/2;
 
-	Node* n1 = getHilbertCurveHelper(nodes + n1_start_index, size/2, width);
-	Node* n2 = getHilbertCurveHelper(nodes + n2_start_index, size/2, width);
-	Node* n3 = getHilbertCurveHelper(nodes + n3_start_index, size/2, width);
-	Node* n4 = getHilbertCurveHelper(nodes + n4_start_index, size/2, width);
+	Node* n1 = getHilbertCurve(nodes + n1_start_index, size/2, width);
+	Node* n2 = getHilbertCurve(nodes + n2_start_index, size/2, width);
+	Node* n3 = getHilbertCurve(nodes + n3_start_index, size/2, width);
+	Node* n4 = getHilbertCurve(nodes + n4_start_index, size/2, width);
 
 	(getEndNode(n1))->next = n2;
 	(getEndNode(n2))->next = n4;
 	(getEndNode(n4))->next = n3;
 
 	return n1;
-}
-
-Node* getHilbertCurve(Pixel* pixels, Node* nodes, int width) {
-	for (int i = 0; i < width * width; i++) {
-		nodes[i].val = pixels[i];
-		nodes[i].next = (Node *) NULL;
-	}
-
-	Node * returnValue = getHilbertCurveHelper(nodes, width, width);
-
-	return returnValue;
 }
 
 int main(int argc, char *argv[]) {
@@ -98,10 +83,12 @@ int main(int argc, char *argv[]) {
 	for (unsigned char* p = img, i = 0; p != img + (width * width * channels); p += channels, i++) {
 		Pixel pix = {*p, *(p + 1), *(p + 2)};
 		pixels[i] = pix;
+		nodes[i].val = pix;
+		nodes[i].next = (Node *) NULL;
 	}
 
 	// Visualize the image
-	Node* hilbertCurve = getHilbertCurve(pixels, nodes, width);
+	Node* hilbertCurve = getHilbertCurve(nodes, width, width);
 	
 	// Debugging
 	printNodes(hilbertCurve);
