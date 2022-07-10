@@ -67,20 +67,42 @@ bool WriteWaveFile(const char *szFileName, void *pData, int32_t nDataSize, int16
 	return true;
 }
 
+void addSine(int32_t* src, int sampleRate, int numSamples, int freq, double volume) {
+	for (int i = 0; i < numSamples; i++) {
+		src[i] += INT_MAX * volume * sin((freq * 2 * M_PI) * i / (float)sampleRate);
+	}
+}
+
+void addSquare(int32_t* src, int sampleRate, int numSamples, int freq, double volume) {
+	for (int i = 0; i < numSamples; i++) {
+		// Checkpoint is the number of samples until the square wave changes
+		// sign. It depends on the frequency and the sample rate.
+		int checkpoint = sampleRate / (2 * freq);
+
+		int sign = ((i / checkpoint) % 2 == 0) ? 1 : -1;
+
+		src[i] += INT_MAX * volume * sign;
+	}
+}
+
+// TODO
+void addSaw(int32_t* src, int sampleRate, int numSamples, int freq, double volume) {
+	for (int i = 0; i < numSamples; i++) {
+		src[i] += 0;
+	}
+}
+
 int main() {
 	int nSampleRate = 44100;
 	int nNumSeconds = 4;
 	int nNumChannels = 1;
 	int nNumSamples = nSampleRate * nNumChannels * nNumSeconds;
-	int freq = 100;
 
 	int32_t *pData = (int32_t *) malloc(sizeof(int32_t) * nNumSamples);
 
-	for (int i = 0; i < nNumSamples; i++) {
-		pData[i] = INT_MAX * sin((freq * 2 * M_PI) * i / (float)nSampleRate);
-	}
+	addSquare(pData, nSampleRate, nNumSamples, 100, 0.4);
 
-	WriteWaveFile("outmono.wav",pData,nNumSamples * sizeof(pData[0]),nNumChannels,nSampleRate,sizeof(pData[0])*8);
+	WriteWaveFile("audio.wav", pData, nNumSamples * sizeof(pData[0]), nNumChannels, nSampleRate, sizeof(pData[0]) * 8);
 	free(pData);
 
 	return 0;
