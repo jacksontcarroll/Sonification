@@ -1,4 +1,4 @@
-# C++ Image Sonification Program
+# C Image Sonification Program
 ### Dependencies
 - SDL2
 - Make
